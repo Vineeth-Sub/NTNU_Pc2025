@@ -4,6 +4,7 @@ using System.Linq;
 using Grasshopper.Kernel;
 using Rhino.Geometry;
 using MathNet.Numerics.LinearAlgebra;
+using System.Diagnostics;
 
 namespace NTNU_Pc2025
 {
@@ -28,6 +29,8 @@ namespace NTNU_Pc2025
             pManager.AddPointParameter("LoadNodes", "LN", "LoadNodes to be analyzed", GH_ParamAccess.list);
             pManager.AddVectorParameter("Load", "L", "LoadVector to be analyzed", GH_ParamAccess.item);
             pManager.AddPointParameter("SupportsNodes", "SN", "Supports to be analyzed", GH_ParamAccess.list);
+            pManager.AddBooleanParameter("Apply Gravity", "Gravity", "True for gravity false without gravity", GH_ParamAccess.item, true);
+
         }
 
         /// <summary>
@@ -36,6 +39,7 @@ namespace NTNU_Pc2025
         protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
         {
             pManager.AddGenericParameter("FEM", "FEM", "FEM analysis that gives U vector", GH_ParamAccess.item);
+            pManager.AddGenericParameter("Matrix", "M", "Stiffnessmatrix", GH_ParamAccess.list);
         }
 
         /// <summary>
@@ -48,10 +52,12 @@ namespace NTNU_Pc2025
             List<Point3d> loadNodes = new List<Point3d>();
             Vector3d loads = new Vector3d();
             List<Point3d> supportNodes = new List<Point3d>();
+            Boolean Switch = new Boolean();
             DA.GetDataList(0, lines);
             DA.GetDataList(1, loadNodes);
             DA.GetData(2,ref loads);
             DA.GetDataList(3, supportNodes);
+            DA.GetData(4, ref Switch);
 
             List<Point3d> Nodes = createNodesFromListLines(lines);
 
@@ -59,6 +65,7 @@ namespace NTNU_Pc2025
 
             // CREATE STRUCTURE
             FEM_Structure structure = new FEM_Structure(elements, Nodes);
+            var xxx = structure.GlobalStiffnessMatrix.ToArray();
 
             // Debug: Print Global Stiffness Matrix
             AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Global Stiffness Matrix:");
@@ -72,6 +79,15 @@ namespace NTNU_Pc2025
             AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Force Vector:");
             AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, forceVector.ToString());
 
+
+            Vector<double> G;
+            if (Switch == true)
+                G = Gravity(elements, Nodes);
+            else
+                G = Vector<double>.Build.Dense(Nodes.Count * 2);
+
+
+
             // GET FIXED NODE INDICES
             List<int> fixedNodeIndices = GetFixedNodeIndices(Nodes, supportNodes);
 
@@ -81,50 +97,17 @@ namespace NTNU_Pc2025
 
 
 
-            Vector<double> displacements = FEM_Solver.SolveSystem(this, structure.GlobalStiffnessMatrix, forceVector, fixedNodeIndices);
-            List<Vector3d> grasshopperVectors = ConvertToVector3DList(displacements);
+           Vector<double> displacements = FEM_Solver.SolveSystem(this, structure.GlobalStiffnessMatrix, forceVector, fixedNodeIndices, G);
+           List<Vector3d> grasshopperVectors = ConvertToVector3DList(displacements);
 
             // Debug: Print Displacements
             AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Displacements:");
-            AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, displacements.ToString());
+            //AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, displacements.ToString());
 
 
             DA.SetDataList(0, grasshopperVectors);
+            DA.SetDataList(1, xxx);
 
-
-
-            //List<Point3d> startNodes = new List<Point3d>();
-            //List<Point3d> endNodes = new List<Point3d>();
-            //List<int> nodeNumber = new List<int>();
-
-            /* 
-             for (int i = 0; i < lines.Count; i++)
-             {
-                 foreach (Curve line in lines)
-                 {
-                     startNodes.Add(line.PointAtStart);
-                     endNodes.Add(line.PointAtEnd);
-                     nodeNumber.Add(i);
-                 }
-             }
-
-             */
-
-            /*
-
-            for (int i = 0; i < lines.Count; i++)
-            {
-                nodeNumber.Add(i);
-            }
-
-            */
-
-
-
-
-
-
-            //DA.SetDataList(0, Nodes);
 
 
         }
@@ -203,7 +186,29 @@ namespace NTNU_Pc2025
             return forceVector;
         }
 
-         List<Vector3d> ConvertToVector3DList(Vector<double> displacements)
+
+        Vector<double> Gravity(List<FEM_Element> ELEMENTS, List<Point3d> globalNodes)
+        {
+            double g = 9.82;
+            Vector<double> gravity = Vector<double>.Build.Dense(globalNodes.Count * 2);
+
+            for (int i = 0; i < globalNodes.Count; i++)
+            {
+                FEM_Element correspondingElement = ELEMENTS.FirstOrDefault(e => e.StartNode == i || e.EndNode == i);
+                if (correspondingElement != null)
+                {
+                    double mass = correspondingElement.M; // Accessing the mass property
+                    gravity[i * 2 + 1] = -mass * g / 2; // Apply gravity in the Z direction
+                }
+
+            }
+
+            return gravity;
+
+        }
+
+
+        List<Vector3d> ConvertToVector3DList(Vector<double> displacements)
         {
             List<Vector3d> vectors = new List<Vector3d>();
             for (int i = 0; i < displacements.Count; i += 2)
@@ -213,49 +218,6 @@ namespace NTNU_Pc2025
             return vectors;
         }
 
-
-
-
-
-        /*
-        List<int> GetLoadNodeIndices(List<Point3d> allNodes, List<Point3d> loadNodes)
-        {
-            List<int> loadNodeIndices = new List<int>();
-            // Find the indices of load nodes in the allNodes list
-            foreach (Point3d loadNode in loadNodes)
-            {
-                int index = allNodes.IndexOf(loadNode);
-                if (index >= 0) // Only add valid indices
-                {
-                    loadNodeIndices.Add(index);
-                }
-            }
-            return loadNodeIndices;
-        }
-        */
-
-
-        /*
-        List<Point3d> createStartNodesFromListLines(List<Line> lines)
-        {
-            List<Point3d> nodes = new List<Point3d>();
-            foreach (Line line in lines)
-            {
-                nodes.Add(line.From);
-            }
-            return nodes;
-        }
-
-        List<Point3d> createEndNodesFromListLines(List<Line> lines)
-        {
-            List<Point3d> nodes = new List<Point3d>();
-            foreach (Line line in lines)
-            {
-                nodes.Add(line.To);
-            }
-            return nodes;
-        }
-        */
 
 
 

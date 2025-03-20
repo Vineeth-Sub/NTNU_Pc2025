@@ -30,7 +30,7 @@ namespace NTNU_Pc2025
                 // Get global DOF indices
                 int startIndex = element.StartNode * 3; // 3D system
                 int endIndex = element.EndNode * 3;
-                double L = globalNodes[element.StartNode].DistanceTo(globalNodes[element.EndNode]);
+                double L = globalNodes[element.StartNode].DistanceTo(globalNodes[element.EndNode])/1000;
 
                 // Extract displacements
                 
@@ -51,7 +51,7 @@ namespace NTNU_Pc2025
                 Vector<double> u_local = RR * u_global;
 
                 // Compute force: F = (EA/L) * (u_end - u_start)
-                double force = (element.YoungsModulus * element.Area / L) * (u_local[3] - u_local[0]);
+                double force = (element.YoungsModulus*1000 * element.Area*1000 / L) * (u_local[3] - u_local[0])/1000; //kN
 
                 forces.Add(force);
             }

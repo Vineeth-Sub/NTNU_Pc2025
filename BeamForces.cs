@@ -31,9 +31,9 @@ namespace NTNU_Pc2025
                     AxialForce = fLocal[0],   // Fx
                     ShearForceY = fLocal[1],  // Fy
                     ShearForceZ = fLocal[2],  // Fz
-                    TorsionalMoment = fLocal[3],  // Mx
-                    BendingMomentY = fLocal[4],  // My
-                    BendingMomentZ = fLocal[5]   // Mz
+                    TorsionalMoment = fLocal[3],  // Mx *10??
+                    BendingMomentY = fLocal[4],  // My  *10??
+                    BendingMomentZ = fLocal[5]   // Mz  *10??
                 };
 
                 forcesList.Add(forces);

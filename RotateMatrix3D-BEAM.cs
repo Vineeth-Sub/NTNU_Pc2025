@@ -33,15 +33,9 @@ namespace NTNU_Pc2025
              Vector<double> v = Vector<double>.Build.DenseOfArray(new double[] { 0, 0, 1 });
              if (Math.Abs(lx) < 1e-6 && Math.Abs(ly) < 1e-6)
                  v = Vector<double>.Build.DenseOfArray(new double[] { 1, 0, 0 });
+
+
             
-
-            /*
-            Vector<double> v = Math.Abs(lx) < 1e-6 && Math.Abs(lz) < 1e-6 ?
-                Vector<double>.Build.DenseOfArray(new double[] { 1, 0, 0 }) :
-                Vector<double>.Build.DenseOfArray(new double[] { 0, 0, 1 });
-            */
-
-
             // Compute local y-axis (perpendicular to both v and element axis)
             Vector<double> ex = Vector<double>.Build.DenseOfArray(new double[] { lx, ly, lz });
              Vector<double> ey = v.CrossProducts(ex).Normalize(2);
@@ -66,19 +60,58 @@ namespace NTNU_Pc2025
              RR.SetSubMatrix(9, 9, R);
             
 
+
+
+
+
             /*
+            
             double L = StartPoint.DistanceTo(EndPoint);
-            double cosx = (EndPoint.X - StartPoint.X) / L;
-            double cosy = (EndPoint.Y - StartPoint.Y) / L;
-            double cosz = (EndPoint.Z - StartPoint.Z) / L;
+            double cosx = (EndPoint.X - StartPoint.X) / L; //l
+            double cosy = (EndPoint.Y - StartPoint.Y) / L; //m
+            double cosz = (EndPoint.Z - StartPoint.Z) / L; //n
 
             double cosxz = Math.Sqrt(Math.Pow(cosx, 2) + Math.Pow(cosz, 2));
             double c = Math.Cos(0);
             double s = Math.Sin(0);
 
-            Matrix<double> R;
+            Matrix<double> R = DenseMatrix.OfArray(new double[,]
+      {
+            { cosx, cosy, cosz },
+            { -cosy, cosx, 0 },
+            { -cosz, 0, cosx }
+      });
 
-            if ((EndPoint.X - StartPoint.X) == 0 && (EndPoint.Z - StartPoint.Z) == 0)
+            // Construct the 12x12 Transformation Matrix
+            Matrix<double> T = DenseMatrix.CreateIdentity(12);
+            for (int i = 0; i < 3; i++)
+            {
+                for (int j = 0; j < 3; j++)
+                {
+                    T[i, j] = R[i, j];       // Upper-left 3x3
+                    T[i + 3, j + 3] = R[i, j]; // Upper-right 3x3
+                    T[i + 6, j + 6] = R[i, j]; // Lower-left 3x3
+                    T[i + 9, j + 9] = R[i, j]; // Lower-right 3x3
+                }
+            }
+
+            */
+
+        
+            
+
+
+
+            return RR;
+
+        }
+
+    }
+}
+
+
+/*
+ * if ((EndPoint.X - StartPoint.X) == 0 && (EndPoint.Z - StartPoint.Z) == 0)
             {
                 R = DenseMatrix.OfArray(new double[,]
                 {
@@ -96,8 +129,7 @@ namespace NTNU_Pc2025
         {(cosx * cosy * s + cosz * c) / cosxz, cosxz * s, (cosy * cosz * s - cosx * c) / cosxz}
                 });
             }
-
-            // Create a 12x12 matrix by stacking R on the diagonal
+    // Create a 12x12 matrix by stacking R on the diagonal
             Matrix<double> RR = DenseMatrix.OfArray(new double[12, 12]);
 
             // Fill the diagonal blocks with R
@@ -107,13 +139,5 @@ namespace NTNU_Pc2025
             RR.SetSubMatrix(9, 9, R);
 
             // Return the 12x12 matrix
-            */
 
-
-
-            return RR;
-
-        }
-
-    }
-}
+*/

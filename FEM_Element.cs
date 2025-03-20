@@ -22,10 +22,11 @@ namespace NTNU_Pc2025
         public Point3d StartPoint;
         public Point3d EndPoint;
         public double Angle;
+        public double M;
+        public double rho;
 
 
-
-        public FEM_Element(List<Point3d> globalNodes, int startNode, int endNode, double E, double A)
+        public FEM_Element(List<Point3d> globalNodes, int startNode, int endNode, double E, double A, double rho)
         {
             StartNode = startNode;
             EndNode = endNode;
@@ -33,6 +34,10 @@ namespace NTNU_Pc2025
             Area = A;
             globalNodes = globalNodes;
             LocalStiffnessMatrix = ComputeLocalStiffness3D(globalNodes ,startNode, endNode, E, A);
+            rho = rho;
+            double L = globalNodes[startNode].DistanceTo(globalNodes[endNode])/1000;
+            double m = rho * A * L;
+            M = m;
         }
 
         public FEM_Element(int startNode, int endNode, double E, double A, List<Point3d> globalNodes, double angle)
@@ -60,7 +65,7 @@ namespace NTNU_Pc2025
             Point3d start = globalNodes[StartNode];
             Point3d end = globalNodes[EndNode];
 
-            double L = start.DistanceTo(end);  // Compute length of bar
+            double L = start.DistanceTo(end)/1000;  // Compute length of bar
 
             double EA_L = (YoungsModulus * Area) / L;
 
@@ -85,7 +90,7 @@ namespace NTNU_Pc2025
             Point3d start = globalNodes[StartNode];
             Point3d end = globalNodes[EndNode];
 
-            double L = start.DistanceTo(end);  // Compute length of bar
+            double L = start.DistanceTo(end)/1000;  // Compute length of bar
 
             double EA_L = (E * A) / L;
 
@@ -99,6 +104,15 @@ namespace NTNU_Pc2025
             { 0, 0, -EA_L, 0, 0, EA_L }
             */
 
+            /*
+            Matrix<double> kLocal = Matrix<double>.Build.DenseOfArray(new double[,] {
+            { EA_L, 0, 0, -EA_L, 0, 0 },
+            { 0, 0, 0, 0, 0, 0 },
+            { 0, 0, 0, 0, 0, 0 },
+            { -EA_L, 0, 0, EA_L, 0, 0 },
+            { 0, 0, 0, 0, 0, 0 },
+            { 0, 0, 0, 0, 0, 0 },
+              */
 
             Matrix<double> kLocal = Matrix<double>.Build.DenseOfArray(new double[,] {
             { EA_L, 0, 0, -EA_L, 0, 0 },
@@ -107,11 +121,30 @@ namespace NTNU_Pc2025
             { -EA_L, 0, 0, EA_L, 0, 0 },
             { 0, -EA_L, 0, 0, EA_L, 0 },
             { 0, 0, -EA_L, 0, 0, EA_L }
-                                                                                       });
-            Matrix<double> rotationMatrix3D = Rotate_Matrix3D.RotateMatrix3D(start, end);
-            Matrix<double> kGlobal = rotationMatrix3D.Transpose() * kLocal * rotationMatrix3D;
+                                                                                     });
 
-            return kGlobal;
+            var l = (end.X - start.X) / L;
+            var m = (end.Y - start.Y) / L;
+            var n = (end.Z - start.Z) / L;
+
+
+            Matrix<double> kg1 = Matrix<double>.Build.DenseOfArray(new double[,] {
+            {  l*l,  l*m,  l*n, -l*l, -l*m, -l*n },
+            {  l*m,  m*m,  m*n, -l*m, -m*m, -m*n },
+            {  l*n,  m*n,  n*n, -l*n, -m*n, -n*n },
+            { -l*l, -l*m, -l*n,  l*l,  l*m,  l*n },
+            { -l*m, -m*m, -m*n,  l*m,  m*m,  m*n },
+            { -l*n, -m*n, -n*n,  l*n,  m*n,  n*n }
+            });
+
+            kg1 = kg1 * EA_L;
+
+            Matrix<double> T1 = Rotate_Matrix3D.RotateMatrix3D(start, end);
+            Matrix<double> T2 = Rotate_Matrix3D.RotateMatrix3D(start, end);
+            T2 = T2.Transpose();
+            Matrix<double> kGlobal = T2.Multiply(kLocal);
+            var kg = kGlobal.Multiply(T1);
+            return kg1;
 
         }
 

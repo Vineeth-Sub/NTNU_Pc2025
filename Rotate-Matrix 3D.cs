@@ -62,8 +62,10 @@ namespace NTNU_Pc2025
        });
             */
 
+          
+
             
-            double L = StartPoint.DistanceTo(EndPoint);
+            double L = StartPoint.DistanceTo(EndPoint)/1000;
             double lx = (EndPoint.X - StartPoint.X) / L;
             double ly = (EndPoint.Y - StartPoint.Y) / L;
             double lz = (EndPoint.Z - StartPoint.Z) / L;
@@ -76,7 +78,7 @@ namespace NTNU_Pc2025
             Vector<double> ex = Vector<double>.Build.DenseOfArray(new double[] { lx, ly, lz });
             Vector<double> ey = v.CrossProducts(ex).Normalize(2);
             Vector<double> ez = ex.CrossProducts(ey); // Ensure right-hand rule
-
+            //
             // Create 3×3 rotation matrix
             Matrix<double> R = DenseMatrix.OfArray(new double[,]
             {
@@ -91,10 +93,10 @@ namespace NTNU_Pc2025
             // Fill the diagonal blocks with R
             RR.SetSubMatrix(0, 0, R);
             RR.SetSubMatrix(3, 3, R);
-
+            
             
 
-
+          
 
 
             return RR;///UNSURE ABOUT THIS ROTATION MATRIX

@@ -30,7 +30,7 @@ namespace NTNU_Pc2025
         {
             // Compute the utilization for a single element
             double sigma = 355; // Yield strength of steel
-            double A = element.Area; // Cross-sectional area
+            double A = element.Area*1000; // Cross-sectional area
 
             return (force / A) / sigma;
         }
