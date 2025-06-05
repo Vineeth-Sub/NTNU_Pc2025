@@ -75,7 +75,7 @@ namespace NTNU_Pc2025
 
             //KMat[4, 4] = 1;
             //KMat[5, 5] = 1;
-            //KMat[11, 11] = 1;  //WHY DOES THIS HELP COLUMN?
+            //KMat[11, 11] = 1;
 
 
 

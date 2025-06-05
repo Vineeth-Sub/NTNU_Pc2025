@@ -31,6 +31,12 @@ namespace NTNU_Pc2025
             foreach (var element in Elements)
             {
                 Matrix<double> kLocal = element.LocalStiffnessMatrix;
+
+
+                // Skip invalid elements
+                if (kLocal == null || kLocal.RowCount < 4 || kLocal.ColumnCount < 4)
+                    continue;
+
                 int startIndex = element.StartNode * 2;
                 int endIndex = element.EndNode * 2;
 

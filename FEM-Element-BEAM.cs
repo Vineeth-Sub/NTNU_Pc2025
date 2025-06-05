@@ -38,7 +38,7 @@ namespace NTNU_Pc2025
             this.J = J;
             globalNodes = globalNodes;
             LocalStiffnessMatrix = ComputeLocalStiffness3DBEAM(globalNodes, startNode, endNode, E, A, Iy, Iz, G, J);
-            double L = globalNodes[startNode].DistanceTo(globalNodes[endNode]) / 1000;
+            double L = globalNodes[startNode].DistanceTo(globalNodes[endNode]);
             double m = rho * A * L;
             M = m;
         }
@@ -48,12 +48,12 @@ namespace NTNU_Pc2025
             Point3d start = globalNodes[StartNode];
             Point3d end = globalNodes[EndNode];
 
-            double L = start.DistanceTo(end) / 1000;  // Compute length of bar
+            double L = start.DistanceTo(end);  // Compute length of bar
 
 
-            double l = (EndPoint.X - StartPoint.X) / L; //l
-            double m = (EndPoint.Y - StartPoint.Y) / L; //m
-            double n = (EndPoint.Z - StartPoint.Z) / L; //n
+            double l = (end.X - start.X) / L; //l
+            double m = (end.Y - start.Y) / L; //m
+            double n = (end.Z - start.Z) / L; //n
 
             double L2 = Math.Pow(L, 2);
             double L3 = Math.Pow(L, 3);

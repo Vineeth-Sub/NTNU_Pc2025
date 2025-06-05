@@ -5,6 +5,8 @@ using Grasshopper.Kernel;
 using Rhino.Geometry;
 using MathNet.Numerics.LinearAlgebra;
 using System.Diagnostics;
+using OfficeOpenXml.FormulaParsing.Excel.Functions.Math;
+using static Rhino.UI.Controls.CollapsibleSectionImpl;
 
 namespace NTNU_Pc2025
 {
@@ -29,8 +31,11 @@ namespace NTNU_Pc2025
             pManager.AddPointParameter("LoadNodes", "LN", "LoadNodes to be analyzed", GH_ParamAccess.list);
             pManager.AddVectorParameter("Load", "L", "LoadVector to be analyzed", GH_ParamAccess.item);
             pManager.AddPointParameter("SupportsNodes", "SN", "Supports to be analyzed", GH_ParamAccess.list);
-            pManager.AddBooleanParameter("Apply Gravity", "Gravity", "True for gravity false without gravity", GH_ParamAccess.item, true);
-
+            pManager.AddBooleanParameter("Apply Gravity", "Gravity", "True for gravity false without gravity", GH_ParamAccess.item, false);
+            pManager.AddNumberParameter("E", "E", "Young's Modulus", GH_ParamAccess.item, 2.1E10);
+            pManager.AddNumberParameter("A", "A", "Area", GH_ParamAccess.item, 0.002390);
+            pManager.AddNumberParameter("Density", "Density", "Density", GH_ParamAccess.item, 7850);
+            pManager.AddNumberParameter("Sfactor", "S", "Scale factor for the displacement", GH_ParamAccess.item, 1);
         }
 
         /// <summary>
@@ -39,7 +44,10 @@ namespace NTNU_Pc2025
         protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
         {
             pManager.AddGenericParameter("FEM", "FEM", "FEM analysis that gives U vector", GH_ParamAccess.item);
+            pManager.AddPointParameter("Moved Nodes", "Points", "Nodes moved because of the forces", GH_ParamAccess.list);
+            pManager.AddLineParameter("Moved Elements", "Lines", "Elements moved because of the forces", GH_ParamAccess.list);
             pManager.AddGenericParameter("Matrix", "M", "Stiffnessmatrix", GH_ParamAccess.list);
+            pManager.AddNumberParameter("Max displacement", "MaxU", "Max displacement", GH_ParamAccess.item);
         }
 
         /// <summary>
@@ -53,19 +61,29 @@ namespace NTNU_Pc2025
             Vector3d loads = new Vector3d();
             List<Point3d> supportNodes = new List<Point3d>();
             Boolean Switch = new Boolean();
+            double E = new double();
+            double A = new double();
+            double rho = new double();
+            double Sfactor = new double();
             DA.GetDataList(0, lines);
             DA.GetDataList(1, loadNodes);
             DA.GetData(2,ref loads);
             DA.GetDataList(3, supportNodes);
             DA.GetData(4, ref Switch);
+            DA.GetData(5, ref E);
+            DA.GetData(6, ref A);
+            DA.GetData(7, ref rho);
+            DA.GetData(8, ref Sfactor);
+
+
 
             List<Point3d> Nodes = createNodesFromListLines(lines);
 
-            List<FEM_Element> elements = CreateElements(lines, Nodes);
+            List<FEM_Element> elements = CreateElements(lines, Nodes, E, A, rho);
 
             // CREATE STRUCTURE
             FEM_Structure structure = new FEM_Structure(elements, Nodes);
-            var xxx = structure.GlobalStiffnessMatrix.ToArray();
+            var StifMat = structure.GlobalStiffnessMatrix.ToArray();
 
             // Debug: Print Global Stiffness Matrix
             AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, "Global Stiffness Matrix:");
@@ -97,7 +115,8 @@ namespace NTNU_Pc2025
 
 
 
-           Vector<double> displacements = FEM_Solver.SolveSystem(this, structure.GlobalStiffnessMatrix, forceVector, fixedNodeIndices, G);
+           Vector<double> displacements = FEM_Solver_2D.SolveSystem(this, structure.GlobalStiffnessMatrix, forceVector, fixedNodeIndices, G);
+           //double maxDisplacment = ve
            List<Vector3d> grasshopperVectors = ConvertToVector3DList(displacements);
 
             // Debug: Print Displacements
@@ -105,8 +124,32 @@ namespace NTNU_Pc2025
             //AddRuntimeMessage(GH_RuntimeMessageLevel.Remark, displacements.ToString());
 
 
+            // DISPLACED NODES
+            List<Point3d> MovedNodes = ComputeDisplacedNodes(Nodes, displacements, Sfactor);
+
+            // DISPLACED TRUSS
+            List<Line> MovedElements = ComputeDisplacedTruss(MovedNodes, elements);
+
+
+            List<double> displacementMagnitudes = new List<double>();
+            for (int i = 0; i < displacements.Count; i += 2)
+            {
+                double ux = displacements[i];
+                double uz = displacements[i + 1];
+                double mag = Math.Sqrt(ux * ux + uz * uz);
+                displacementMagnitudes.Add(mag);
+            }
+
+            double maxDisplacement = displacementMagnitudes.Max();
+
+
+
+
             DA.SetDataList(0, grasshopperVectors);
-            DA.SetDataList(1, xxx);
+            DA.SetDataList(1, MovedNodes);
+            DA.SetDataList(2, MovedElements);
+            DA.SetDataList(3, StifMat);
+            DA.SetData(4, maxDisplacement);
 
 
 
@@ -128,7 +171,7 @@ namespace NTNU_Pc2025
             return nodes;
         }
 
-        List<FEM_Element> CreateElements(List<Curve> lines, List<Point3d> nodes)
+        List<FEM_Element> CreateElements(List<Curve> lines, List<Point3d> nodes, double E, double A, double rho)
         {
             List<FEM_Element> elements = new List<FEM_Element>();
 
@@ -136,7 +179,7 @@ namespace NTNU_Pc2025
             {
                 int startIndex = nodes.IndexOf(line.PointAtStart);
                 int endIndex = nodes.IndexOf(line.PointAtEnd);
-                double angle = Math.Atan2(line.PointAtEnd.Y - line.PointAtStart.Y, line.PointAtEnd.X - line.PointAtStart.X);
+                double angle = Math.Atan2(line.PointAtEnd.Z - line.PointAtStart.Z, line.PointAtEnd.X - line.PointAtStart.X);
 
                 Matrix<double> kLocal = Matrix<double>.Build.DenseOfArray(new double[,] {
             {  1, 0, -1, 0 },
@@ -145,7 +188,7 @@ namespace NTNU_Pc2025
             {  0, 0, 0, 0 },
         });
 
-                elements.Add(new FEM_Element(startIndex, endIndex, 5,5, nodes, angle));
+                elements.Add(new FEM_Element(startIndex, endIndex, E,A, rho, nodes, angle));
             }
 
             return elements;
@@ -157,7 +200,7 @@ namespace NTNU_Pc2025
             List<int> fixedNodeIndices = new List<int>();
 
             // Find the indices of fixed nodes in the allNodes list
-            foreach (Point3d supportNode in supportNodes)  //HERE MIGHT THERE BE A PROBLEM
+            foreach (Point3d supportNode in supportNodes) 
             {
                 int index = allNodes.FindIndex(node => node.Equals(supportNode));
 
@@ -178,13 +221,22 @@ namespace NTNU_Pc2025
             {
                 int index = allNodes.FindIndex(node => node.Equals(loadNodes[i]));
 
-                forceVector[index * 2] = loadForces.X;
-                forceVector[index * 2 + 1] = loadForces.Y;
-                
+                if (index != -1)
+                {
+                    forceVector[index * 2] = loadForces.X;
+                    forceVector[index * 2 + 1] = loadForces.Z;
+                }
+                else
+                {
+                    // Handle the case where the node is not found
+                    // For example, log an error or throw an exception
+                }
             }
-
             return forceVector;
+
         }
+
+            
 
 
         Vector<double> Gravity(List<FEM_Element> ELEMENTS, List<Point3d> globalNodes)
@@ -213,9 +265,44 @@ namespace NTNU_Pc2025
             List<Vector3d> vectors = new List<Vector3d>();
             for (int i = 0; i < displacements.Count; i += 2)
             {
-                vectors.Add(new Vector3d(displacements[i], displacements[i + 1], 0));
+                vectors.Add(new Vector3d(displacements[i], 0, displacements[i + 1]));
             }
             return vectors;
+        }
+
+
+        List<Point3d> ComputeDisplacedNodes(List<Point3d> originalNodes, Vector<double> displacements, double scaleFactor)
+        {
+            List<Point3d> displacedNodes = new List<Point3d>();
+
+            for (int i = 0; i < originalNodes.Count; i++)
+            {
+                int index = i * 2; // Since it's 2D, each node has 2 displacement values (Ux, Uy)
+                Point3d displacedPoint = new Point3d(
+                    originalNodes[i].X + displacements[index] * scaleFactor,
+                    originalNodes[i].Y, //+ displacements[index + 1] * scaleFactor, 
+                    originalNodes[i].Z + displacements[index + 1] * scaleFactor
+                );
+                displacedNodes.Add(displacedPoint);
+            }
+
+            return displacedNodes;
+        }
+
+
+
+        List<Line> ComputeDisplacedTruss(List<Point3d> displacedNodes, List<FEM_Element> elements)
+        {
+            List<Line> displacedLines = new List<Line>();
+
+            foreach (var element in elements)
+            {
+                Point3d start = displacedNodes[element.StartNode];
+                Point3d end = displacedNodes[element.EndNode];
+                displacedLines.Add(new Line(start, end));
+            }
+
+            return displacedLines;
         }
 
 

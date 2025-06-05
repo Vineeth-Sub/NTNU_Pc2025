@@ -64,8 +64,8 @@ namespace NTNU_Pc2025
 
 
 
-            /*
             
+            /*
             double L = StartPoint.DistanceTo(EndPoint);
             double cosx = (EndPoint.X - StartPoint.X) / L; //l
             double cosy = (EndPoint.Y - StartPoint.Y) / L; //m
@@ -83,19 +83,21 @@ namespace NTNU_Pc2025
       });
 
             // Construct the 12x12 Transformation Matrix
-            Matrix<double> T = DenseMatrix.CreateIdentity(12);
+            Matrix<double> RR = DenseMatrix.CreateIdentity(12);
             for (int i = 0; i < 3; i++)
             {
                 for (int j = 0; j < 3; j++)
                 {
-                    T[i, j] = R[i, j];       // Upper-left 3x3
-                    T[i + 3, j + 3] = R[i, j]; // Upper-right 3x3
-                    T[i + 6, j + 6] = R[i, j]; // Lower-left 3x3
-                    T[i + 9, j + 9] = R[i, j]; // Lower-right 3x3
+                    RR[i, j] = R[i, j];       // Upper-left 3x3
+                    RR[i + 3, j + 3] = R[i, j]; // Upper-right 3x3
+                    RR[i + 6, j + 6] = R[i, j]; // Lower-left 3x3
+                    RR[i + 9, j + 9] = R[i, j]; // Lower-right 3x3
                 }
             }
 
             */
+
+
 
         
             
@@ -141,3 +143,4 @@ namespace NTNU_Pc2025
             // Return the 12x12 matrix
 
 */
+

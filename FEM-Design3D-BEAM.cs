@@ -31,17 +31,17 @@ namespace NTNU_Pc2025
             pManager.AddVectorParameter("Load", "L", "LoadVector to be analyzed", GH_ParamAccess.item);
             pManager.AddPointParameter("SupportsNodes", "SN", "Supports to be analyzed", GH_ParamAccess.list);
             pManager.AddNumberParameter("ScaleFactor", "Scale", "ScaleFactor for displacement", GH_ParamAccess.item,1);
-            pManager.AddBooleanParameter("Apply Gravity", "Gravity", "True for gravity flase withou gravity", GH_ParamAccess.item, true);
+            pManager.AddBooleanParameter("Apply Gravity", "Gravity", "True for gravity flase withou gravity", GH_ParamAccess.item, false);
             pManager.AddCurveParameter("BlockLoads", "BL", "BlockLoads to be analyzed", GH_ParamAccess.list); //PROBLEM BIG PROBLEM
             pManager[6].Optional = true;
             pManager.AddVectorParameter("BlockLoads", "BL", "BlockLoadVector to be analyzed", GH_ParamAccess.item);
             pManager[7].Optional = true;
-            pManager.AddNumberParameter("E", "E", "Young's Modulus", GH_ParamAccess.list, 21);
+            pManager.AddNumberParameter("E", "E", "Young's Modulus", GH_ParamAccess.list, 2.1E10);
             pManager.AddNumberParameter("A", "A", "Area", GH_ParamAccess.list, 0.002390);
             pManager.AddNumberParameter("Density", "Density", "Density", GH_ParamAccess.list, 7850);
             pManager.AddCurveParameter("Different properties lines", "DpL", "Apply different properties for different lines.", GH_ParamAccess.list);
             pManager[11].Optional = true;
-            pManager.AddNumberParameter("DefaultE", "DefE", "Default E for unspecified lines", GH_ParamAccess.item, 21);
+            pManager.AddNumberParameter("DefaultE", "DefE", "Default E for unspecified lines", GH_ParamAccess.item, 2.1E10);
             pManager.AddNumberParameter("DefaultA", "DefA", "Default A for unspecified lines", GH_ParamAccess.item, 0.002390);
             pManager.AddNumberParameter("DefaultDensity", "DefD", "Default density for unspecified lines", GH_ParamAccess.item, 7850);
 

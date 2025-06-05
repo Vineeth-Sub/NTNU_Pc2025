@@ -34,12 +34,12 @@ namespace NTNU_Pc2025
             pManager.AddVectorParameter("SupportConditions", "SC", "Vector3d defining DOFs constraints per node (1=Fixed, 0=Free)", GH_ParamAccess.list, new Vector3d(1,1,1));
             pManager.AddNumberParameter("ScaleFactor", "Scale", "ScaleFactor for displacement", GH_ParamAccess.item, 1);
             pManager.AddBooleanParameter("Apply Gravity", "Gravity", "True for gravity false without gravity", GH_ParamAccess.item, true);
-            pManager.AddNumberParameter("E", "E", "Young's Modulus", GH_ParamAccess.list, 21);
+            pManager.AddNumberParameter("E", "E", "Young's Modulus", GH_ParamAccess.list, 2.1E10);
             pManager.AddNumberParameter("A", "A", "Area", GH_ParamAccess.list, 0.002390);
             pManager.AddNumberParameter("Density", "Density", "Density", GH_ParamAccess.list, 7850);
             pManager.AddCurveParameter("Different properties lines", "DpL", "Apply different properties for different lines.", GH_ParamAccess.list);
             pManager[10].Optional = true;
-            pManager.AddNumberParameter("DefaultE", "DefE", "Default E for unspecified lines", GH_ParamAccess.item, 21);
+            pManager.AddNumberParameter("DefaultE", "DefE", "Default E for unspecified lines", GH_ParamAccess.item, 2.1E10);
             pManager.AddNumberParameter("DefaultA", "DefA", "Default A for unspecified lines", GH_ParamAccess.item, 0.002390);
             pManager.AddNumberParameter("DefaultDensity", "DefD", "Default density for unspecified lines", GH_ParamAccess.item, 7850);
         }

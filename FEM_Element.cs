@@ -28,6 +28,17 @@ namespace NTNU_Pc2025
 
         public FEM_Element(List<Point3d> globalNodes, int startNode, int endNode, double E, double A, double rho)
         {
+
+            if (globalNodes == null || globalNodes.Count == 0 ||
+    startNode < 0 || endNode < 0 ||
+    startNode >= globalNodes.Count || endNode >= globalNodes.Count)
+            {
+                // Don't throw, just exit cleanly
+                LocalStiffnessMatrix = null;
+                M = 0;
+                return;
+            }
+
             StartNode = startNode;
             EndNode = endNode;
             YoungsModulus = E;
@@ -35,24 +46,56 @@ namespace NTNU_Pc2025
             globalNodes = globalNodes;
             LocalStiffnessMatrix = ComputeLocalStiffness3D(globalNodes ,startNode, endNode, E, A);
             rho = rho;
-            double L = globalNodes[startNode].DistanceTo(globalNodes[endNode])/1000;
+            double L = globalNodes[startNode].DistanceTo(globalNodes[endNode]);
+
+            if (L < 1e-6)  // avoid divide-by-zero
+            {
+                LocalStiffnessMatrix = null;
+                M = 0;
+                return;
+            }
+
             double m = rho * A * L;
             M = m;
         }
 
-        public FEM_Element(int startNode, int endNode, double E, double A, List<Point3d> globalNodes, double angle)
+        public FEM_Element(int startNode, int endNode, double E, double A,double rho, List<Point3d> globalNodes, double angle)
         {
+
+            if (globalNodes == null || globalNodes.Count == 0 ||
+startNode < 0 || endNode < 0 ||
+startNode >= globalNodes.Count || endNode >= globalNodes.Count)
+            {
+                // Don't throw, just exit cleanly
+                LocalStiffnessMatrix = null;
+                M = 0;
+                return;
+            }
+
             StartNode = startNode;
             EndNode = endNode;
             YoungsModulus = E;
             Area = A;
             Angle = angle;
             LocalStiffnessMatrix = ComputeLocalStiffness(globalNodes, angle);
+            double L = globalNodes[startNode].DistanceTo(globalNodes[endNode]);
+
+            if (L < 1e-6)  // avoid divide-by-zero
+            {
+                LocalStiffnessMatrix = null;
+                M = 0;
+                return;
+            }
+
+            double m = rho * A * L;
+            M = m;
 
         }
 
         public FEM_Element(int startNode, int endNode, Matrix<double> localStiffnessMatrix, double angle)
         {
+
+
             StartNode = startNode;
             EndNode = endNode;
             Angle = angle;
@@ -65,9 +108,12 @@ namespace NTNU_Pc2025
             Point3d start = globalNodes[StartNode];
             Point3d end = globalNodes[EndNode];
 
-            double L = start.DistanceTo(end)/1000;  // Compute length of bar
+            double L = start.DistanceTo(end);  // Compute length of bar
 
             double EA_L = (YoungsModulus * Area) / L;
+            double k = EA_L; //WHYYY
+            double c = Math.Cos(angle);
+            double s = Math.Sin(angle);
 
             Matrix<double> kLocal = Matrix<double>.Build.DenseOfArray(new double[,] {
                 {  EA_L, 0, -EA_L, 0 },
@@ -75,8 +121,18 @@ namespace NTNU_Pc2025
                {  -EA_L, 0, EA_L, 0 },
                {  0, 0, 0, 0 },
                                                                                        });
+
+            Matrix<double> K_global = DenseMatrix.OfArray(new double[,]
+        {
+            {  k * c * c,  k * c * s, -k * c * c, -k * c * s },
+            {  k * c * s,  k * s * s, -k * c * s, -k * s * s },
+            { -k * c * c, -k * c * s,  k * c * c,  k * c * s },
+            { -k * c * s, -k * s * s,  k * c * s,  k * s * s }
+                    });
+
             Matrix<double> rotationMatrix = Rotate_Matrix.RotateMatrix(angle);
-            return rotationMatrix * kLocal * rotationMatrix.Transpose();
+            //return rotationMatrix * kLocal * rotationMatrix.Transpose();
+            return K_global;
         }
 
         private Matrix<double> ComputeLocalStiffness2(Matrix<double> kmatrix, double angle)
@@ -90,7 +146,7 @@ namespace NTNU_Pc2025
             Point3d start = globalNodes[StartNode];
             Point3d end = globalNodes[EndNode];
 
-            double L = start.DistanceTo(end)/1000;  // Compute length of bar
+            double L = start.DistanceTo(end);  // Compute length of bar
 
             double EA_L = (E * A) / L;
 
